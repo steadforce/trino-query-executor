@@ -15,7 +15,7 @@ RUN curl -fLo /usr/local/bin/trino https://repo1.maven.org/maven2/io/trino/trino
 ENV TRINO_HOST http://trino:8080
 ENV CATALOG kafka
 ENV SCHEMA steadforce
-ENV QUERY_SLEEP_TIME 1
+ENV QUERY_INTERVAL_IN_S 1
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod 755 /usr/local/bin/entrypoint.sh
