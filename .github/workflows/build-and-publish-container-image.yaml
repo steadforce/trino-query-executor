@@ -1,4 +1,4 @@
-name: Create and publish kafka producer container image
+name: Create and publish container images
 
 on:
   push:
@@ -13,12 +13,12 @@ env:
   IMAGE_NAME: trino-query-executor
 
 jobs:
-  build-and-push-image:
+  build-and-push-kafka-image:
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
-    
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -31,8 +31,8 @@ jobs:
         registry: ${{ env.REGISTRY }}
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - name: Extract metadata (tags, labels) for container
-      id: meta
+    - name: Extract metadata (tags, labels) for Kafka container
+      id: meta_kafka
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/steadforce/apps/${{ env.IMAGE_NAME }}
@@ -43,16 +43,62 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=semver,pattern={{major}}
           type=sha
-    - name: Build container image for tests
+    - name: Build Kafka container image for tests
       uses: docker/build-push-action@v5
       with:
         context: .
         push: false
-        tags: ${{ env.IMAGE_NAME }}:test
-    - name: Tag and push tested container image
+        tags: ${{ env.IMAGE_NAME }}-kafka:test
+    - name: Tag and push tested Kafka container image
       uses: docker/build-push-action@v5
       with:
         context: .
         push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+        tags: ${{ steps.meta_kafka.outputs.tags }}
+        labels: ${{ steps.meta_kafka.outputs.labels }}
+
+  build-and-push-iceberg-image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: Dockerfile_Iceberg
+    - name: Log in to the container registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Extract metadata (tags, labels) for Iceberg container
+      id: meta_iceberg
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/steadforce/apps/${{ env.IMAGE_NAME }}-iceberg
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=semver,pattern={{major}}
+          type=sha
+    - name: Build Iceberg container image for tests
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        dockerfile: Dockerfile_Iceberg
+        push: false
+        tags: ${{ env.IMAGE_NAME }}-iceberg:test
+    - name: Tag and push tested Iceberg container image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        dockerfile: Dockerfile_Iceberg
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta_iceberg.outputs.tags }}
+        labels: ${{ steps.meta_iceberg.outputs.labels }}
